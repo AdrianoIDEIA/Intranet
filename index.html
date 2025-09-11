@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Intranet Login</title>
+    <link rel="stylesheet" href="index.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.sh/@google/genai@^0.8.0",
+          "marked": "https://esm.sh/marked@^15.0.8"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="login-container" id="login-container" aria-label="Login Form">
+      <form id="login-form" aria-labelledby="login-title">
+        <h1 id="login-title">Intranet</h1>
+        <p>Welcome back! Please log in to your account.</p>
+        <div class="input-group">
+          <label for="email">User</label>
+          <input
+            type="text"
+            id="email"
+            name="email"
+            placeholder="e.g., DEV"
+            required
+            aria-required="true"
+            autocomplete="username"
+          />
+        </div>
+        <div class="input-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="••••••••"
+            required
+            aria-required="true"
+            autocomplete="current-password"
+          />
+        </div>
+        <p id="error-message" class="error-message" aria-live="polite"></p>
+        <button type="submit">Login</button>
+        <div class="links">
+          <a href="#">Forgot Password?</a>
+        </div>
+      </form>
+    </main>
+
+    <div id="dashboard-container" style="display: none">
+      <header class="dashboard-header">
+        <div class="logo">Intranet</div>
+        <h2 id="page-title">Intranet</h2>
+        <div class="header-right">
+          <div id="user-info" class="user-info">
+            <span id="welcome-message"></span>
+            <button id="view-profile-btn" class="view-profile-button">
+              Ver Perfil
+            </button>
+          </div>
+          <div class="notification-area">
+            <button
+              id="notification-bell"
+              class="notification-bell"
+              aria-label="Toggle notifications"
+              aria-haspopup="true"
+              aria-expanded="false"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="24"
+                height="24"
+              >
+                <path
+                  d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"
+                />
+              </svg>
+            </button>
+            <div id="notification-panel" class="notification-panel">
+              <section class="pendencia-section">
+                <h3>Triggers Pendentes</h3>
+                <ul class="pendencia-list">
+                  <li><span>Ana Silva</span> <span>15/08/2024</span></li>
+                  <li><span>Carlos Souza</span> <span>14/08/2024</span></li>
+                  <li><span>Mariana Costa</span> <span>13/08/2024</span></li>
+                </ul>
+              </section>
+              <section class="pendencia-section">
+                <h3>Triggers em Espera de Demanda</h3>
+                <ul class="pendencia-list pendencia-list-espera">
+                  <li>
+                    <span>Dr. Ricardo</span><span>João Pereira</span>
+                    <span>12/08/2024</span>
+                  </li>
+                  <li>
+                    <span>Dra. Beatriz</span><span>Fernanda Lima</span>
+                    <span>11/08/2024</span>
+                  </li>
+                </ul>
+              </section>
+              <section class="pendencia-section">
+                <h3>Triggers Feitos</h3>
+                <ul class="pendencia-list">
+                  <li><span>Roberto Andrade</span> <span>10/08/2024</span></li>
+                  <li><span>Lucia Martins</span> <span>09/08/2024</span></li>
+                </ul>
+              </section>
+            </div>
+          </div>
+        </div>
+      </header>
+      <nav class="dashboard-nav">
+        <button
+          class="nav-button active"
+          data-page="Painel de Anamnese"
+          data-target="#anamnese-panel"
+        >
+          Painel de Anamnese
+        </button>
+        <button
+          class="nav-button"
+          data-page="Painel de Pacientes"
+          data-target="#pacientes-panel"
+        >
+          Painel de Pacientes
+        </button>
+        <button
+          class="nav-button"
+          data-page="Painel de Gerenciamento de Cartas"
+          data-target="#cartas-panel"
+        >
+          Painel de Gerenciamento de Cartas
+        </button>
+      </nav>
+      <main id="dashboard-content">
+        <div id="anamnese-panel" class="panel active">
+          <div id="anamnese-actions" class="anamnese-actions">
+            <button id="comecar-anamnese-btn">Começar</button>
+            <button>Editar</button>
+            <button>Continuar</button>
+          </div>
+          <div id="anamnese-form-container" style="display: none">
+            <form id="anamnese-form" class="anamnese-form">
+              <div class="form-header">
+                <h2>ANAMNESE MULTIDISCIPLINAR</h2>
+                <div class="form-row">
+                  <div class="form-group half">
+                    <label for="anamnese-data">Data</label>
+                    <input
+                      type="text"
+                      id="anamnese-data"
+                      name="anamnese-data"
+                      placeholder="DD/MM/AAAA"
+                    />
+                  </div>
+                  <div class="form-group half">
+                    <label for="anamnese-responsavel">Responsável</label>
+                    <input
+                      type="text"
+                      id="anamnese-responsavel"
+                      name="anamnese-responsavel"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <fieldset>
+                <legend>1. IDENTIFICAÇÃO</legend>
+                <div class="form-group">
+                  <label for="paciente-nome">Nome Paciente</label>
+                  <input
+                    type="text"
+                    id="paciente-nome"
+                    name="paciente-nome"
+                  />
+                </div>
+                <div class="form-row">
+                  <div class="form-group quarter">
+                    <label for="paciente-sexo">Sexo</label>
+                    <input
+                      type="text"
+                      id="paciente-sexo"
+                      name="paciente-sexo"
+                    />
+                  </div>
+                  <div class="form-group quarter">
+                    <label for="paciente-dn">DN</label>
+                    <input
+                      type="text"
+                      id="paciente-dn"
+                      name="paciente-dn"
+                      placeholder="DD/MM/AAAA"
+                    />
+                  </div>
+                  <div class="form-group quarter">
+                    <label for="paciente-idade">Idade</label>
+                    <input
+                      type="text"
+                      id="paciente-idade"
+                      name="paciente-idade"
+                    />
+                  </div>
+                </div>
+                <label>Família:</label>
+                <div class="form-row">
+                  <div class="form-group third">
+                    <label for="mae-nome">Mãe</label
+                    ><input type="text" id="mae-nome" />
+                  </div>
+                  <div class="form-group third">
+                    <label for="mae-escolaridade">Escol.</label
+                    ><input type="text" id="mae-escolaridade" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group third">
+                    <label for="mae-profissao">Profissão</label
+                    ><input type="text" id="mae-profissao" />
+                  </div>
+                  <div class="form-group third">
+                    <label for="mae-periodo">Período</label
+                    ><input type="text" id="mae-periodo" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group third">
+                    <label for="pai-nome">Pai</label
+                    ><input type="text" id="pai-nome" />
+                  </div>
+                  <div class="form-group third">
+                    <label for="pai-escolaridade">Escol.</label
+                    ><input type="text" id="pai-escolaridade" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group third">
+                    <label for="pai-profissao">Profissão</label
+                    ><input type="text" id="pai-profissao" />
+                  </div>
+                  <div class="form-group third">
+                    <label for="pai-periodo">Período</label
+                    ><input type="text" id="pai-periodo" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="irmaos">Irmãos</label
+                  ><input type="text" id="irmaos" />
+                </div>
+                <div class="form-group">
+                  <label for="outros">Outros</label
+                  ><input type="text" id="outros" />
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>2. ESCOLA E ROTINA ESCOLAR</legend>
+                <div class="form-group">
+                  <label for="escola-nome">Nome Escola</label
+                  ><input type="text" id="escola-nome" />
+                </div>
+                <div class="form-row">
+                  <div class="form-group quarter">
+                    <label for="escola-serie">Série</label
+                    ><input type="text" id="escola-serie" />
+                  </div>
+                  <div class="form-group quarter">
+                    <label for="escola-alunos">Alunos na sala</label
+                    ><input type="text" id="escola-alunos" />
+                  </div>
+                  <div class="form-group quarter">
+                    <label for="escola-inicio">Início</label
+                    ><input type="text" id="escola-inicio" />
+                  </div>
+                  <div class="form-group quarter">
+                    <label for="escola-turno">Turno</label
+                    ><input type="text" id="escola-turno" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="acompanhante-escolar"
+                    >Acompanhante Escolar</label
+                  ><input type="text" id="acompanhante-escolar" />
+                </div>
+                <div class="form-group">
+                  <label for="escolas-anteriores">Escolas anteriores</label
+                  ><textarea id="escolas-anteriores" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="desempenho-escolar"
+                    >Desempenho escolar (comportamentos, interação,
+                    pedagógico)</label
+                  ><textarea id="desempenho-escolar" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="atividades-extracurriculares"
+                    >Atividades Extracurriculares</label
+                  ><input type="text" id="atividades-extracurriculares" />
+                </div>
+                <div class="form-group">
+                  <label for="atividades-externas">Atividades Externas</label
+                  ><input type="text" id="atividades-externas" />
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>3. ROTINA DIÁRIA E AVDs</legend>
+                <div class="form-group">
+                  <label for="rotina-acordar">Acordar</label
+                  ><input type="text" id="rotina-acordar" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-higiene">Higiene Matinal</label
+                  ><input type="text" id="rotina-higiene" />
+                </div>
+                <label>Alimentação:</label>
+                <div class="form-group">
+                  <label for="alimentacao-cafe">- Café</label
+                  ><input type="text" id="alimentacao-cafe" />
+                </div>
+                <div class="form-group">
+                  <label for="alimentacao-lanche-m">- Lanche M</label
+                  ><input type="text" id="alimentacao-lanche-m" />
+                </div>
+                <div class="form-group">
+                  <label for="alimentacao-almoco">- Almoço</label
+                  ><input type="text" id="alimentacao-almoco" />
+                </div>
+                <div class="form-group">
+                  <label for="alimentacao-lanche-t">- Lanche T</label
+                  ><input type="text" id="alimentacao-lanche-t" />
+                </div>
+                <div class="form-group">
+                  <label for="alimentacao-jantar">- Jantar</label
+                  ><input type="text" id="alimentacao-jantar" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-refeicoes">Rotina das refeições</label
+                  ><input type="text" id="rotina-refeicoes" />
+                </div>
+                <div class="form-group">
+                  <label for="restricoes-alimentares"
+                    >Restrições alimentares</label
+                  ><input type="text" id="restricoes-alimentares" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-banho">Banho</label
+                  ><input type="text" id="rotina-banho" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-vestir">Vestir – Tarefas</label
+                  ><input type="text" id="rotina-vestir" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-telas">Uso de Telas</label
+                  ><input type="text" id="rotina-telas" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-higiene-geral"
+                    >Higiene (Fralda / H. Bucal)</label
+                  ><input type="text" id="rotina-higiene-geral" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-sono">Sono</label
+                  ><input type="text" id="rotina-sono" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-desfralde">Desfralde</label
+                  ><input type="text" id="rotina-desfralde" />
+                </div>
+                <div class="form-group">
+                  <label for="rotina-corte">Corte de Unhas e Cabelos</label
+                  ><input type="text" id="rotina-corte" />
+                </div>
+                <div class="form-group">
+                  <label for="interesses-brincadeiras"
+                    >Interesses e brincadeiras</label
+                  ><textarea id="interesses-brincadeiras" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="interacao-social">Interação social</label
+                  ><textarea id="interacao-social" rows="2"></textarea>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>4. INFORMAÇÕES MÉDICAS</legend>
+                <div class="form-group">
+                  <label for="med-gestacao">Gestação</label
+                  ><textarea id="med-gestacao" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="med-nascimento">Nascimento</label
+                  ><input type="text" id="med-nascimento" />
+                </div>
+                <div class="form-group">
+                  <label for="med-fatos">Fatos relevantes</label
+                  ><textarea id="med-fatos" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="med-saude">Saúde / Alergias / Medicações</label
+                  ><textarea id="med-saude" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="med-diagnosticos"
+                    >Diagnósticos e Terapias</label
+                  ><textarea id="med-diagnosticos" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="med-terapeutas">Médico e terapeutas</label
+                  ><textarea id="med-terapeutas" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="med-atrasos">Atrasos observados</label
+                  ><textarea id="med-atrasos" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Estereotipias:</label>
+                  <div class="checkbox-grid">
+                    <div>
+                      <input type="checkbox" id="est-fixa-olhar" /><label
+                        for="est-fixa-olhar"
+                        >Fixa Olhar</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-nao-atencao" /><label
+                        for="est-nao-atencao"
+                        >Não atenção em atividades</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-gira-eixo" /><label
+                        for="est-gira-eixo"
+                        >Gira no próprio eixo</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-repete-mov" /><label
+                        for="est-repete-mov"
+                        >Repete movimentos</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-ponta-pes" /><label
+                        for="est-ponta-pes"
+                        >Anda na ponta dos pés</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-sensivel-sons" /><label
+                        for="est-sensivel-sons"
+                        >Sensível a sons</label
+                      >
+                    </div>
+                    <div>
+                      <input
+                        type="checkbox"
+                        id="est-explora-ambientes"
+                      /><label for="est-explora-ambientes"
+                        >Explora ambientes</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-grita" /><label
+                        for="est-grita"
+                        >Grita demasiadamente</label
+                      >
+                    </div>
+                    <div>
+                      <input
+                        type="checkbox"
+                        id="est-nao-gosta-toque"
+                      /><label for="est-nao-gosta-toque"
+                        >Não gosta de toque</label
+                      >
+                    </div>
+                    <div>
+                      <input
+                        type="checkbox"
+                        id="est-nao-usa-cobertor"
+                      /><label for="est-nao-usa-cobertor"
+                        >Não usa cobertor</label
+                      >
+                    </div>
+                    <div>
+                      <input
+                        type="checkbox"
+                        id="est-chacoalha-maos"
+                      /><label for="est-chacoalha-maos"
+                        >Chacoalhar as mãos</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-range-dentes" /><label
+                        for="est-range-dentes"
+                        >Ranger dentes</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-roer-unhas" /><label
+                        for="est-roer-unhas"
+                        >Roer unhas</label
+                      >
+                    </div>
+                    <div>
+                      <input
+                        type="checkbox"
+                        id="est-sons-repetitivos"
+                      /><label for="est-sons-repetitivos"
+                        >Sons repetitivos</label
+                      >
+                    </div>
+                    <div>
+                      <input type="checkbox" id="est-olhar-lateral" /><label
+                        for="est-olhar-lateral"
+                        >Olhar pela lateral</label
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="med-queixas">Queixas</label
+                  ><textarea id="med-queixas" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="med-objetivos">Objetivos</label
+                  ><textarea id="med-objetivos" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="med-adesao">Adesão familiar</label
+                  ><textarea id="med-adesao" rows="2"></textarea>
+                </div>
+              </fieldset>
+
+              <table class="skills-table">
+                <thead>
+                  <tr>
+                    <th>Habilidade</th>
+                    <th>Desde</th>
+                    <th>Nota</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td data-label="Habilidade">Autonomia AVD</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Postura</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Motora Fina</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Motora Grossa</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Equilíbrio</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Organização</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Busca de estímulos</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Flapping</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Nodding de cabeça</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Gira no eixo</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Movimentos de balanço</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Ecolalia</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">
+                      Necessidade de alinhar objetos
+                    </td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Interrompe movimentos</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Fixação de Olhar</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Desregulação Sensorial</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <fieldset>
+                <legend>5. QUESTIONÁRIO ESPECÍFICO – TERAPIA OCUPACIONAL</legend>
+                <div class="form-group">
+                  <label for="to-auditiva"
+                    >Dificuldades sensoriais - Auditiva</label
+                  ><input type="text" id="to-auditiva" />
+                </div>
+                <div class="form-group">
+                  <label for="to-tatil">Dificuldades sensoriais - Tátil</label
+                  ><input type="text" id="to-tatil" />
+                </div>
+                <div class="form-group">
+                  <label for="to-visual">Dificuldades sensoriais - Visual</label
+                  ><input type="text" id="to-visual" />
+                </div>
+                <div class="form-group">
+                  <label for="to-gustativa"
+                    >Dificuldades sensoriais - Gustativa</label
+                  ><input type="text" id="to-gustativa" />
+                </div>
+                <div class="form-group">
+                  <label for="to-vestibular"
+                    >Dificuldades sensoriais - Vestibular</label
+                  ><input type="text" id="to-vestibular" />
+                </div>
+                <div class="form-group">
+                  <label for="to-proprioceptiva"
+                    >Dificuldades sensoriais - Proprioceptiva</label
+                  ><input type="text" id="to-proprioceptiva" />
+                </div>
+                <div class="form-group">
+                  <label for="to-avds-independencia"
+                    >Independência nas AVDs</label
+                  ><textarea id="to-avds-independencia" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="to-avds-auxilio">Auxílio nas AVDs</label
+                  ><textarea id="to-avds-auxilio" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="to-motora-fina">Observações motora fina</label
+                  ><textarea id="to-motora-fina" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="to-dificuldades-motoras"
+                    >Dificuldades de equilíbrio, força ou coordenação motora
+                    global</label
+                  ><textarea id="to-dificuldades-motoras" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="to-reacao-desafios"
+                    >Reação a atividades que envolvem altura, movimento ou
+                    desafios motores</label
+                  ><textarea id="to-reacao-desafios" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="to-reacao-higiene"
+                    >Como lida com situações de corte de cabelo, unhas, higiene
+                    do rosto e cabeça</label
+                  ><textarea id="to-reacao-higiene" rows="2"></textarea>
+                </div>
+              </fieldset>
+
+              <table class="skills-table">
+                <thead>
+                  <tr>
+                    <th>Habilidade</th>
+                    <th>Desde</th>
+                    <th>Nota</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td data-label="Habilidade">Contato Visual</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Sentar</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Esperar</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Agressividade</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Autoagressão</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Regidez cognitiva</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Resposta de chamado</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Se isola</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Ansiedade</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Gritar e Chorar</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Expressar emoções</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">
+                      Comportamento incoerente com o contexto
+                    </td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Habilidade">Brincar Funcional</td>
+                    <td data-label="Desde"><input type="text" /></td>
+                    <td data-label="Nota"><input type="text" /></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <fieldset>
+                <legend>6. QUESTIONÁRIO ESPECÍFICO – PSICOLOGIA</legend>
+                <div class="form-group">
+                  <label for="psico-comportamentos"
+                    >Comportamentos-problema</label
+                  ><textarea id="psico-comportamentos" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="psico-reacao-guardar"
+                    >Reação à necessidade de guardar brinquedos e finalizar
+                    atividades</label
+                  ><textarea id="psico-reacao-guardar" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="psico-participacao-brincadeiras"
+                    >Participação em brincadeiras simbólicas, faz de conta ou
+                    atividades criativas</label
+                  ><input type="text" id="psico-participacao-brincadeiras" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-reacao-mudancas"
+                    >Reação a mudanças na rotina ou quando contrariado(a)</label
+                  ><input type="text" id="psico-reacao-mudancas" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-comportamentos-repetitivos"
+                    >Comportamentos repetitivos, estereotipados ou hiperfoco em
+                    temas/objetos</label
+                  ><input type="text" id="psico-comportamentos-repetitivos" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-rotina-diaria"
+                    >Como é a rotina diária da criança?</label
+                  ><input type="text" id="psico-rotina-diaria" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-supervisao"
+                    >Precisa de supervisão ou consegue seguir rotinas
+                    sozinho(a)?</label
+                  ><input type="text" id="psico-supervisao" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-reacao-transicoes"
+                    >Reação a mudanças de rotina ou transições entre
+                    atividades</label
+                  ><input type="text" id="psico-reacao-transicoes" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-frustracoes"
+                    >Como lida com frustrações, espera e limites impostos por
+                    adultos</label
+                  ><input type="text" id="psico-frustracoes" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-humor"
+                    >Humor ao longo do dia e variações frequentes</label
+                  ><input type="text" id="psico-humor" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-comportamento-grupo"
+                    >Comportamento em situações de grupo (escola, terapia,
+                    família)</label
+                  ><input type="text" id="psico-comportamento-grupo" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-interesses"
+                    >Principais interesses, brinquedos e brincadeiras
+                    preferidas</label
+                  ><input type="text" id="psico-interesses" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-hiperfoco"
+                    >Hiperfoco em temas ou objetos específicos</label
+                  ><input type="text" id="psico-hiperfoco" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-relacao"
+                    >Relação com colegas, irmãos e adultos</label
+                  ><input type="text" id="psico-relacao" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-amigos"
+                    >Facilidade ou dificuldade para fazer amigos</label
+                  ><input type="text" id="psico-amigos" />
+                </div>
+                <div class="form-group">
+                  <label for="psico-expressoes"
+                    >Expressão de emoções e sentimentos (palavras, gestos ou
+                    comportamentos)</label
+                  ><input type="text" id="psico-expressoes" />
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>7. QUESTIONÁRIO ESPECÍFICO – FONOAUDIOLOGIA</legend>
+                <table class="skills-table">
+                  <thead>
+                    <tr>
+                      <th>Habilidade</th>
+                      <th>Desde</th>
+                      <th>Nota</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Habilidade">Comunicação</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data--label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Comunicação verbal</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Motricidade oral</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Linguagem gestual</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Relatos diários</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Interação com seus pares</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Linguagem Escrita</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Leitura</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Escola desenvolvimento</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">Autonomia para a comunicação</td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Habilidade">
+                        Reação ao não ser compreendido
+                      </td>
+                      <td data-label="Desde"><input type="text" /></td>
+                      <td data-label="Nota"><input type="text" /></td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="form-group">
+                  <label for="fono-comunicacao"
+                    >Forma de comunicação (verbal, não verbal, comunicação
+                    alternativa)</label
+                  ><input type="text" id="fono-comunicacao" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-aponta"
+                    >Aponta, pede, pega o que deseja</label
+                  ><input type="text" id="fono-aponta" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-responde-nome"
+                    >Responde ao ser chamado(a) pelo nome</label
+                  ><input type="text" id="fono-responde-nome" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-reconhecimento"
+                    >Reconhecimento de letras, números, cores, formas, objetos e
+                    animais</label
+                  ><input type="text" id="fono-reconhecimento" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-comandos"
+                    >Compreensão e atendimento de comandos verbais e
+                    gestuais</label
+                  ><input type="text" id="fono-comandos" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-comunicacao-alt"
+                    >A criança utiliza comunicação verbal, não verbal ou
+                    comunicação alternativa (PECS, gestos, outros)?</label
+                  ><input type="text" id="fono-comunicacao-alt" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-primeiras-palavras"
+                    >Idade do início das primeiras palavras e frases</label
+                  ><input type="text" id="fono-primeiras-palavras" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-regressao">Houve regressão na fala?</label
+                  ><input type="text" id="fono-regressao" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-ecolalia"
+                    >Presença de ecolalia, frases repetidas, uso de jargões ou
+                    linguagem funcional</label
+                  ><input type="text" id="fono-ecolalia" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-compreensao-comandos"
+                    >Compreensão e execução de comandos verbais e gestuais</label
+                  ><input type="text" id="fono-compreensao-comandos" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-resposta-nome-2"
+                    >Responde ao ser chamada pelo nome</label
+                  ><input type="text" id="fono-resposta-nome-2" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-capacidade-dialogo"
+                    >Capacidade de pedir, recusar, fazer perguntas e manter
+                    diálogos simples</label
+                  ><input type="text" id="fono-capacidade-dialogo" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-repeticao"
+                    >Uso de frases aprendidas em desenhos ou repetição de falas
+                    de outras pessoas</label
+                  ><input type="text" id="fono-repeticao" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-interacao"
+                    >Interação com adultos seus pares</label
+                  ><input type="text" id="fono-interacao" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-inicia-conversa"
+                    >Busca iniciar conversas</label
+                  ><input type="text" id="fono-inicia-conversa" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-obedece-ordens"
+                    >Obedece ordens simples e complexas</label
+                  ><input type="text" id="fono-obedece-ordens" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-relata-estorias">Relata estórias</label
+                  ><input type="text" id="fono-relata-estorias" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-atencao-visual"
+                    >Dificuldades em manter atenção visual durante conversas ou
+                    instruções</label
+                  ><input type="text" id="fono-atencao-visual" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-alimentacao"
+                    >Alimentação do ponto de vista orofacial, seletividade
+                    alimentar, sialorreia ou dificuldades de
+                    mastigação/deglutição</label
+                  ><input type="text" id="fono-alimentacao" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-desafios"
+                    >Principais desafios e avanços observados na comunicação e
+                    expressão</label
+                  ><input type="text" id="fono-desafios" />
+                </div>
+                <div class="form-group">
+                  <label for="fono-escola"
+                    >Frequenta a escola consegue acompanhar, tem auxilio de
+                    cuidador ou professor auxiliar</label
+                  ><input type="text" id="fono-escola" />
+                </div>
+              </fieldset>
+
+              <button type="submit" class="save-button">Salvar</button>
+            </form>
+          </div>
+        </div>
+        <div id="pacientes-panel" class="panel">
+          <div id="paciente-search-container">
+            <form id="paciente-search-form" class="search-form">
+              <h3>Buscar Paciente</h3>
+              <div class="input-group">
+                <input
+                  type="text"
+                  id="paciente-search-input"
+                  placeholder="Digite o nome do paciente..."
+                />
+                <button type="submit">Buscar</button>
+              </div>
+            </form>
+          </div>
+
+          <div
+            id="paciente-profile-container"
+            class="patient-profile-container"
+            style="display: none"
+          >
+            <button id="back-to-search-btn" class="back-button">
+              &larr; Voltar para a busca
+            </button>
+            <header class="profile-header">
+              <img
+                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80"
+                alt="Foto do Paciente"
+                class="profile-avatar"
+              />
+              <div class="profile-header-info">
+                <h2>Ana Silva</h2>
+                <p>ID: #4821 | Idade: 7 anos</p>
+              </div>
+            </header>
+            <div class="profile-grid">
+              <section class="profile-section">
+                <h3>Treinos Atribuídos</h3>
+                <ul class="profile-list">
+                  <li>Treino de Comunicação Alternativa - 22/08/2024</li>
+                  <li>Treino de Atividades de Vida Diária - 19/08/2024</li>
+                </ul>
+                <a href="#" class="view-all-link">Ver Todos</a>
+              </section>
+              <section class="profile-section">
+                <h3>Anamnese</h3>
+                <ul class="profile-list">
+                  <li>Anamnese Multidisciplinar - 05/06/2024</li>
+                </ul>
+                <a href="#" class="view-all-link">Ver Detalhes</a>
+              </section>
+              <section class="profile-section">
+                <h3>Avaliação</h3>
+                <ul class="profile-list">
+                  <li>Avaliação Fonoaudiológica - 15/07/2024</li>
+                  <li>Avaliação de T.O. - 12/07/2024</li>
+                </ul>
+                <a href="#" class="view-all-link">Ver Todas</a>
+              </section>
+              <section class="profile-section">
+                <h3>Plano Terapêutico</h3>
+                <ul class="profile-list">
+                  <li>Plano Terapêutico Individual (PTI) - Q3 2024</li>
+                </ul>
+                <a href="#" class="view-all-link">Ver Detalhes</a>
+              </section>
+              <section class="profile-section">
+                <h3>Dados Cadastrais</h3>
+                <div class="data-grid">
+                  <p><strong>Responsável:</strong> Maria Silva</p>
+                  <p><strong>Telefone:</strong> (11) 98765-4321</p>
+                  <p><strong>Email:</strong> maria.silva@email.com</p>
+                  <p><strong>Endereço:</strong> Rua das Flores, 123</p>
+                </div>
+                <button class="edit-data-button">Editar</button>
+              </section>
+              <section class="profile-section">
+                <h3>Atribuir Paciente ao Terapeuta</h3>
+                <form class="assignment-form">
+                  <label for="paciente-therapist-select"
+                    >Selecione o Terapeuta:</label
+                  >
+                  <select
+                    id="paciente-therapist-select"
+                    name="paciente-therapist-select"
+                  >
+                    <option value="" disabled selected>-- Escolha --</option>
+                    <option value="dr-ricardo">Dr. Ricardo</option>
+                    <option value="dra-beatriz">Dra. Beatriz</option>
+                    <option value="dr-carlos">Dr. Carlos</option>
+                  </select>
+                  <button type="submit" class="assign-button">Atribuir</button>
+                </form>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div id="cartas-panel" class="panel">
+          <div id="cartas-main-view">
+            <div class="anamnese-actions">
+              <button>Aplicar Carta</button>
+              <button id="escrever-carta-btn">Escrever Carta</button>
+            </div>
+          </div>
+          <div id="cartas-escrever-view" style="display: none">
+            <button id="back-to-cartas-main-btn" class="back-button">
+              &larr; Voltar
+            </button>
+            <div class="anamnese-actions">
+              <button>Começar</button>
+              <button>Editar</button>
+              <button>Continuar</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="profile-modal-overlay" class="modal-overlay" style="display: none">
+      <div id="profile-modal-content" class="modal-content">
+        <button
+          id="close-profile-modal-btn"
+          class="close-modal-button"
+          aria-label="Close profile"
+        >
+          &times;
+        </button>
+        <div class="patient-profile-container">
+          <header class="profile-header">
+            <img
+              src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80"
+              alt="Foto do Usuário"
+              class="profile-avatar"
+            />
+            <div class="profile-header-info">
+              <h2>Perfil do Usuário: Adriano Camargo</h2>
+              <p>UsrCod: #DEV | Especialidade: Desenvolvedor</p>
+            </div>
+          </header>
+          <div class="profile-grid">
+            <section class="profile-section">
+              <h3>Treinos Elaborados</h3>
+              <ul class="profile-list">
+                <li>Treino de Coordenação Motora - 20/08/2024</li>
+                <li>Treino de Habilidades Sociais - 15/08/2024</li>
+                <li>Treino de Foco e Atenção - 10/08/2024</li>
+              </ul>
+              <a href="#" class="view-all-link">Ver Todos</a>
+            </section>
+            <section class="profile-section">
+              <h3>Anamneses Elaboradas</h3>
+              <ul class="profile-list">
+                <li>Anamnese Multidisciplinar - 01/07/2024</li>
+              </ul>
+              <a href="#" class="view-all-link">Ver Detalhes</a>
+            </section>
+            <section class="profile-section">
+              <h3>Avaliações Elaboradas</h3>
+              <ul class="profile-list">
+                <li>Avaliação de T.O. - 18/08/2024</li>
+                <li>Avaliação Psicológica - 12/08/2024</li>
+              </ul>
+              <a href="#" class="view-all-link">Ver Todas</a>
+            </section>
+            <section class="profile-section">
+              <h3>Planos Terapêuticos Elaborados</h3>
+              <ul class="profile-list">
+                <li>Plano Terapêutico Individual (PTI) - Q3 2024</li>
+              </ul>
+              <a href="#" class="view-all-link">Ver Detalhes</a>
+            </section>
+            <section class="profile-section full-width">
+              <h3>Atribuir Paciente ao Terapeuta</h3>
+              <form class="assignment-form">
+                <label for="therapist-select">Selecione o Terapeuta:</label>
+                <select id="therapist-select" name="therapist-select">
+                  <option value="" disabled selected>-- Escolha --</option>
+                  <option value="dr-ricardo">Dr. Ricardo</option>
+                  <option value="dra-beatriz">Dra. Beatriz</option>
+                  <option value="dr-carlos">Dr. Carlos</option>
+                </select>
+                <button type="submit" class="assign-button">Atribuir</button>
+              </form>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
