@@ -52,6 +52,11 @@ const pacienteProfileContainer = document.getElementById(
 const pacienteSearchForm = document.getElementById(
   'paciente-search-form'
 ) as HTMLFormElement;
+const pacienteSearchInput = document.getElementById(
+  'paciente-search-input'
+) as HTMLInputElement;
+// Search results list element added to HTML
+const searchResultsList = document.getElementById('search-results-list') as HTMLUListElement;
 const backToSearchBtn = document.getElementById(
   'back-to-search-btn'
 ) as HTMLButtonElement;
@@ -424,12 +429,108 @@ seedAnamnesesIfEmpty();
 
 // --- Pacientes Panel Logic ---
 
+// Configuration for API: prefer Vite env vars, then window fallbacks, then localhost
+const API_URL = (import.meta as any).env?.VITE_API_URL || (window as any).__API_URL__ || 'http://localhost:5001';
+const API_TOKEN = (import.meta as any).env?.VITE_API_TOKEN || (window as any).__API_TOKEN__ || 'troque_este_token';
+
+// Local sample patients used when localStorage is empty (dev fallback)
+const LOCAL_PATIENT_SAMPLES = [
+  { pacCodigo: 4821, pacNome: 'Ana Silva' },
+  { pacCodigo: 4822, pacNome: 'Carlos Souza' },
+  { pacCodigo: 4823, pacNome: 'Mariana Costa' },
+];
+
+// Fetch patients from API by name, fallback to local storage if API fails
+async function searchPatientsByName(nome: string) {
+  const encoded = encodeURIComponent(nome.trim());
+  try {
+    const res = await fetch(`${API_URL}/api/consultas/paciente-por-nome/${encoded}`, {
+      method: 'GET',
+      headers: {
+        'x-api-token': API_TOKEN,
+      },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    // If API returned an empty array, attempt local fallback (useful in dev)
+    if (Array.isArray(data) && data.length === 0) {
+      console.warn('API returned no results — trying local fallback');
+      // fallthrough to local fallback logic below
+    } else {
+      console.debug('API search returned', data.length ?? 'unknown', 'results');
+      return data;
+    }
+  } catch (err) {
+    console.warn('API search failed, using local fallback.', err);
+    // Local fallback: search seeded anamneses for paciente-nome
+    const list = getStoredAnamneses();
+    let matches: any[] = [];
+    if (list && list.length > 0) {
+      matches = list.filter(item => {
+        const nomeVal = (item.data && (item.data['paciente-nome'] || '')) as string;
+        return nomeVal && nomeVal.toLowerCase().includes(nome.toLowerCase());
+      }).map(item => ({ pacCodigo: item.id, pacNome: item.data['paciente-nome'] }));
+    }
+
+    // If nothing in local storage, use built-in samples
+    if (!matches || matches.length === 0) {
+      matches = LOCAL_PATIENT_SAMPLES.filter(s => s.pacNome.toLowerCase().includes(nome.toLowerCase()));
+    }
+    return matches;
+  }
+}
+
+function clearSearchResults() {
+  if (!searchResultsList) return;
+  searchResultsList.innerHTML = '';
+}
+
+function displaySearchResults(pacientes: any[]) {
+  console.debug('displaySearchResults received', pacientes);
+  if (!searchResultsList) return;
+  clearSearchResults();
+  if (!pacientes || pacientes.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'no-results';
+    li.textContent = 'Nenhum paciente encontrado.';
+    searchResultsList.appendChild(li);
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  pacientes.forEach(p => {
+    const li = document.createElement('li');
+    li.textContent = `${p.pacNome} (Código: ${p.pacCodigo})`;
+    li.dataset.pacCodigo = String(p.pacCodigo);
+    li.dataset.pacNome = String(p.pacNome);
+    li.tabIndex = 0;
+    li.addEventListener('click', () => {
+      // Simple profile rendering: replace name and ID in profile container
+      if (pacienteProfileContainer) {
+        const nameEl = pacienteProfileContainer.querySelector('.profile-header-info h2');
+        const idEl = pacienteProfileContainer.querySelector('.profile-header-info p');
+        if (nameEl) (nameEl as HTMLElement).textContent = String(p.pacNome);
+        if (idEl) (idEl as HTMLElement).textContent = `ID: #${p.pacCodigo}`;
+      }
+      pacienteSearchContainer.style.display = 'none';
+      pacienteProfileContainer.style.display = 'block';
+    });
+    frag.appendChild(li);
+  });
+  searchResultsList.appendChild(frag);
+}
+
 // Handle patient search
-pacienteSearchForm?.addEventListener('submit', (e: Event) => {
+pacienteSearchForm?.addEventListener('submit', async (e: Event) => {
   e.preventDefault();
-  // In a real app, you would fetch patient data here
-  pacienteSearchContainer.style.display = 'none';
-  pacienteProfileContainer.style.display = 'block';
+  const nome = (pacienteSearchInput?.value || '').trim();
+  if (!nome) {
+    alert('Por favor, digite um nome para buscar.');
+    return;
+  }
+  // Call API (with fallback)
+  const results = await searchPatientsByName(nome);
+  displaySearchResults(results || []);
 });
 
 // Handle "back to search" button click
@@ -437,6 +538,7 @@ backToSearchBtn?.addEventListener('click', () => {
   pacienteProfileContainer.style.display = 'none';
   pacienteSearchContainer.style.display = 'block';
   (pacienteSearchForm.querySelector('input') as HTMLInputElement).value = ''; // Clear search input
+  clearSearchResults();
 });
 
 // --- Cartas Panel Logic ---

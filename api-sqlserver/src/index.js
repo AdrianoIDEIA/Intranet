@@ -22,8 +22,16 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/consultas', consultasRouter);
 
 const port = process.env.PORT || 5001;
-app.listen(port, () => {
-  console.log(`API SQLServer rodando na porta ${port}`);
+// Allow binding to a specific host (useful when running on a remote server)
+const host = process.env.HOST || '0.0.0.0';
+app.listen(port, host, () => {
+  console.log(`API SQLServer rodando em http://${host}:${port}`);
+});
+
+// Global error handler
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled error:', err && err.stack ? err.stack : err);
+  res.status(500).json({ message: 'Ocorreu um erro interno no servidor.', error: err?.message || String(err) });
 });
 
 
