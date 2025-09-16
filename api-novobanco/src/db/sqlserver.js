@@ -5,8 +5,6 @@ console.log('Current working directory:', process.cwd());
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-
-
 // `sql` will be set to the imported mssql module (either tedious or msnodesqlv8)
 let sql = null;
 
@@ -111,5 +109,3 @@ export async function getPool() {
 }
 
 export { sql };
-
-

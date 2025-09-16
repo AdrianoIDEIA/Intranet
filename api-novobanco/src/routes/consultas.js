@@ -7,7 +7,6 @@ const router = express.Router();
 // Busca pacientes na tabela CadPac usando pacNome (LIKE) e retorna pacCodigo e pacNome.
 router.get('/paciente-por-nome/:nome', async (req, res, next) => {
   const { nome } = req.params;
-  console.log('Buscando pacientes por nome:', nome);
   if (!nome || String(nome).trim().length === 0) {
     return res.status(400).json({ message: 'Parâmetro nome é obrigatório.' });
   }
@@ -16,22 +15,19 @@ router.get('/paciente-por-nome/:nome', async (req, res, next) => {
     const pool = await getPool();
     // Utiliza parâmetro nome com wildcard para busca por primeiro nome ou parte do nome
     const nameParam = `%${String(nome).trim()}%`;
-    console.log('Parametro SQL:', nameParam);
     const result = await pool.request()
       .input('nome', sql.VarChar, nameParam)
       .query(`SELECT TOP 200 pacCodigo, pacNome FROM CadPac WHERE pacNome LIKE @nome ORDER BY pacNome`);
 
-    console.log('Resultado:', result.recordset.length, 'registros');
     return res.json(result.recordset || []);
   } catch (err) {
-    console.error('Erro na consulta:', err);
     // Encaminha o erro para o middleware de tratamento
     return next(err);
   }
 });
 
 // GET /api/consultas/paciente/:codigo
-// Busca detalhes do paciente na tabela CadPac usando pacCodigo.
+// Busca detalhes do paciente por código
 router.get('/paciente/:codigo', async (req, res, next) => {
   const { codigo } = req.params;
   if (!codigo || isNaN(codigo)) {
@@ -42,13 +38,13 @@ router.get('/paciente/:codigo', async (req, res, next) => {
     const pool = await getPool();
     const result = await pool.request()
       .input('codigo', sql.Int, Number(codigo))
-      .query(`SELECT pacNome, pacSexo, pacDtNasc, pacPaiNome, pacMaeNome FROM CadPac WHERE pacCodigo = @codigo`);
+      .query(`SELECT pacCodigo, pacNome, pacSexo, pacDtNasc, pacPaiNome, pacMaeNome FROM CadPac WHERE pacCodigo = @codigo`);
 
-    if (result.recordset.length === 0) {
+    if (result.recordset && result.recordset.length > 0) {
+      return res.json(result.recordset[0]);
+    } else {
       return res.status(404).json({ message: 'Paciente não encontrado.' });
     }
-
-    return res.json(result.recordset[0]);
   } catch (err) {
     return next(err);
   }

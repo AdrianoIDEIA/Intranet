@@ -42,6 +42,13 @@ const comecarAnamneseBtn = document.getElementById(
 ) as HTMLButtonElement;
 const anamneseForm = document.getElementById('anamnese-form') as HTMLFormElement;
 
+// Patient search elements for anamnese
+const pacienteNomeInput = document.getElementById('paciente-nome') as HTMLInputElement;
+const pacienteSearchSuggestions = document.createElement('ul');
+pacienteSearchSuggestions.id = 'paciente-search-suggestions';
+pacienteSearchSuggestions.className = 'search-suggestions';
+pacienteNomeInput?.parentElement?.appendChild(pacienteSearchSuggestions);
+
 // Pacientes Panel Elements
 const pacienteSearchContainer = document.getElementById(
   'paciente-search-container'
@@ -266,6 +273,115 @@ comecarAnamneseBtn?.addEventListener('click', () => {
   updateAnamnesisVisibility();
 });
 
+// Patient search functionality for anamnese form
+let searchTimeout: any;
+
+function showPatientSuggestions(pacientes: any[]) {
+  if (!pacienteSearchSuggestions) return;
+  pacienteSearchSuggestions.innerHTML = '';
+
+  if (!pacientes || pacientes.length === 0) {
+    pacienteSearchSuggestions.style.display = 'none';
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  pacientes.slice(0, 5).forEach(p => { // Limit to 5 suggestions
+    const li = document.createElement('li');
+    li.textContent = `${p.pacNome} (Código: ${p.pacCodigo})`;
+    li.dataset.pacCodigo = String(p.pacCodigo);
+    li.dataset.pacNome = String(p.pacNome);
+    li.addEventListener('click', async () => {
+      // Fill form fields with patient data
+      await fillPatientDataInForm(p.pacCodigo);
+      pacienteNomeInput.value = p.pacNome;
+      pacienteSearchSuggestions.style.display = 'none';
+    });
+    frag.appendChild(li);
+  });
+  pacienteSearchSuggestions.appendChild(frag);
+  pacienteSearchSuggestions.style.display = 'block';
+}
+
+async function fillPatientDataInForm(codigo: number) {
+  const details = await fetchPatientDetails(codigo);
+  if (!details || !anamneseForm) return;
+
+  // Fill patient information fields and disable them to block editing
+  const pacienteNomeField = anamneseForm.querySelector('#paciente-nome') as HTMLInputElement;
+  const pacienteSexoField = anamneseForm.querySelector('#paciente-sexo') as HTMLInputElement;
+  const pacienteDnField = anamneseForm.querySelector('#paciente-dn') as HTMLInputElement;
+  const pacienteIdadeField = anamneseForm.querySelector('#paciente-idade') as HTMLInputElement;
+  const paiNomeField = anamneseForm.querySelector('#pai-nome') as HTMLInputElement;
+  const maeNomeField = anamneseForm.querySelector('#mae-nome') as HTMLInputElement;
+
+  if (pacienteNomeField) {
+    pacienteNomeField.value = details.pacNome || '';
+    // Keep name field editable for changes
+  }
+  if (pacienteSexoField) {
+    pacienteSexoField.value = details.pacSexo || '';
+    pacienteSexoField.disabled = true;
+  }
+  if (pacienteDnField && details.pacDtNasc) {
+    const date = new Date(details.pacDtNasc);
+    const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    pacienteDnField.value = formattedDate;
+    pacienteDnField.disabled = true;
+  }
+  if (pacienteIdadeField && details.pacDtNasc) {
+    const birthDate = new Date(details.pacDtNasc);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    pacienteIdadeField.value = String(age);
+    pacienteIdadeField.disabled = true;
+  }
+  if (paiNomeField) {
+    paiNomeField.value = details.pacPaiNome || '';
+    paiNomeField.disabled = true;
+  }
+  if (maeNomeField) {
+    maeNomeField.value = details.pacMaeNome || '';
+    maeNomeField.disabled = true;
+  }
+}
+
+// Event listeners for patient search in anamnese
+pacienteNomeInput?.addEventListener('input', (e) => {
+  const value = (e.target as HTMLInputElement).value.trim();
+  clearTimeout(searchTimeout);
+
+  if (value.length < 2) {
+    pacienteSearchSuggestions.style.display = 'none';
+    return;
+  }
+
+  searchTimeout = setTimeout(async () => {
+    const results = await searchPatientsByName(value);
+    showPatientSuggestions(results || []);
+  }, 300); // Debounce search
+});
+
+pacienteNomeInput?.addEventListener('blur', () => {
+  // Delay hiding suggestions to allow click events
+  setTimeout(() => {
+    if (pacienteSearchSuggestions) {
+      pacienteSearchSuggestions.style.display = 'none';
+    }
+  }, 150);
+});
+
+pacienteNomeInput?.addEventListener('focus', () => {
+  const value = pacienteNomeInput.value.trim();
+  if (value.length >= 2 && pacienteSearchSuggestions.children.length > 0) {
+    pacienteSearchSuggestions.style.display = 'block';
+  }
+});
+
 // Helpers para armazenar e serializar a anamnese localmente
 function getStoredAnamneses(): any[] {
   try {
@@ -427,11 +543,14 @@ anamneseForm?.addEventListener('submit', (e: Event) => {
 // Seed inicial (apenas se vazio)
 seedAnamnesesIfEmpty();
 
+
 // --- Pacientes Panel Logic ---
 
 // Configuration for API: prefer Vite env vars, then window fallbacks, then localhost
 const API_URL = (import.meta as any).env?.VITE_API_URL || (window as any).__API_URL__ || 'http://localhost:5001';
 const API_TOKEN = (import.meta as any).env?.VITE_API_TOKEN || (window as any).__API_TOKEN__ || 'troque_este_token';
+console.log('API_URL:', API_URL);
+console.log('API_TOKEN:', API_TOKEN ? '***' : 'not set');
 
 // Local sample patients used when localStorage is empty (dev fallback)
 const LOCAL_PATIENT_SAMPLES = [
@@ -480,9 +599,38 @@ async function searchPatientsByName(nome: string) {
   }
 }
 
+// Fetch patient details by codigo
+async function fetchPatientDetails(codigo: number) {
+  try {
+    const res = await fetch(`${API_URL}/api/consultas/paciente/${codigo}`, {
+      method: 'GET',
+      headers: {
+        'x-api-token': API_TOKEN,
+      },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.debug('Patient details fetched:', data);
+    return data;
+  } catch (err) {
+    console.warn('Failed to fetch patient details:', err);
+    return null;
+  }
+}
+
 function clearSearchResults() {
   if (!searchResultsList) return;
   searchResultsList.innerHTML = '';
+}
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 function displaySearchResults(pacientes: any[]) {
@@ -490,32 +638,181 @@ function displaySearchResults(pacientes: any[]) {
   if (!searchResultsList) return;
   clearSearchResults();
   if (!pacientes || pacientes.length === 0) {
-    const li = document.createElement('li');
-    li.className = 'no-results';
-    li.textContent = 'Nenhum paciente encontrado.';
-    searchResultsList.appendChild(li);
+    const noResultsDiv = document.createElement('div');
+    noResultsDiv.className = 'no-results';
+    noResultsDiv.textContent = 'Nenhum paciente encontrado.';
+    searchResultsList.appendChild(noResultsDiv);
     return;
   }
 
   const frag = document.createDocumentFragment();
   pacientes.forEach(p => {
-    const li = document.createElement('li');
-    li.textContent = `${p.pacNome} (Código: ${p.pacCodigo})`;
-    li.dataset.pacCodigo = String(p.pacCodigo);
-    li.dataset.pacNome = String(p.pacNome);
-    li.tabIndex = 0;
-    li.addEventListener('click', () => {
-      // Simple profile rendering: replace name and ID in profile container
-      if (pacienteProfileContainer) {
-        const nameEl = pacienteProfileContainer.querySelector('.profile-header-info h2');
-        const idEl = pacienteProfileContainer.querySelector('.profile-header-info p');
-        if (nameEl) (nameEl as HTMLElement).textContent = String(p.pacNome);
-        if (idEl) (idEl as HTMLElement).textContent = `ID: #${p.pacCodigo}`;
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'patient-card';
+    cardDiv.style.border = '1px solid #ccc';
+    cardDiv.style.borderRadius = '8px';
+    cardDiv.style.padding = '12px';
+    cardDiv.style.marginBottom = '10px';
+    cardDiv.style.display = 'flex';
+    cardDiv.style.justifyContent = 'space-between';
+    cardDiv.style.alignItems = 'center';
+    cardDiv.style.backgroundColor = '#f9f9f9';
+    cardDiv.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+
+    const infoSpan = document.createElement('span');
+    infoSpan.textContent = `${p.pacNome} (Código: ${p.pacCodigo})`;
+    infoSpan.className = 'patient-info';
+    infoSpan.style.fontWeight = '600';
+    infoSpan.style.fontSize = '1rem';
+
+    const selectButton = document.createElement('button');
+    selectButton.textContent = 'Selecionar';
+    selectButton.className = 'select-patient-button';
+    selectButton.style.backgroundColor = '#4a6cf7';
+    selectButton.style.color = 'white';
+    selectButton.style.border = 'none';
+    selectButton.style.borderRadius = '4px';
+    selectButton.style.padding = '6px 12px';  // Smaller padding for better size
+    selectButton.style.cursor = 'pointer';
+    selectButton.style.fontWeight = 'bold';
+    selectButton.style.fontSize = '0.9rem';  // Slightly smaller font size
+    selectButton.style.transition = 'background-color 0.3s ease';
+    selectButton.addEventListener('mouseenter', () => {
+      selectButton.style.backgroundColor = '#3a54d1';
+    });
+    selectButton.addEventListener('mouseleave', () => {
+      selectButton.style.backgroundColor = '#4a6cf7';
+    });
+
+    selectButton.addEventListener('click', async () => {
+      // Remove any existing confirmation card
+      const existingCard = document.getElementById('confirmation-card');
+      if (existingCard) {
+        existingCard.remove();
       }
+
+      // Create floating confirmation card element
+      const confirmationCard = document.createElement('div');
+      confirmationCard.id = 'confirmation-card';
+      confirmationCard.style.position = 'fixed';
+      confirmationCard.style.top = '50%';
+      confirmationCard.style.left = '50%';
+      confirmationCard.style.transform = 'translate(-50%, -50%)';
+      confirmationCard.style.backgroundColor = 'white';
+      confirmationCard.style.border = '1px solid #ccc';
+      confirmationCard.style.borderRadius = '8px';
+      confirmationCard.style.padding = '20px';
+      confirmationCard.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+      confirmationCard.style.zIndex = '1000';
+      confirmationCard.style.width = '300px';
+      confirmationCard.style.textAlign = 'center';
+      confirmationCard.style.fontSize = '1rem';
+      confirmationCard.style.fontWeight = '600';
+
+      const messageText = document.createElement('p');
+      messageText.textContent = `Selecionar paciente ${p.pacNome} (Código: ${p.pacCodigo})?`;
+      messageText.style.marginBottom = '20px';
+
+      const buttonsContainer = document.createElement('div');
+      buttonsContainer.style.display = 'flex';
+      buttonsContainer.style.justifyContent = 'space-around';
+
+      const yesButton = document.createElement('button');
+      yesButton.textContent = 'Sim';
+      yesButton.style.backgroundColor = '#4a6cf7';
+      yesButton.style.color = 'white';
+      yesButton.style.border = 'none';
+      yesButton.style.borderRadius = '4px';
+      yesButton.style.padding = '6px 12px';
+      yesButton.style.cursor = 'pointer';
+      yesButton.style.fontWeight = 'bold';
+      yesButton.style.fontSize = '1rem';
+      yesButton.style.transition = 'background-color 0.3s ease';
+      yesButton.addEventListener('mouseenter', () => {
+        yesButton.style.backgroundColor = '#3a54d1';
+      });
+      yesButton.addEventListener('mouseleave', () => {
+        yesButton.style.backgroundColor = '#4a6cf7';
+      });
+
+      const noButton = document.createElement('button');
+      noButton.textContent = 'Não';
+      noButton.style.backgroundColor = '#ccc';
+      noButton.style.color = 'black';
+      noButton.style.border = 'none';
+      noButton.style.borderRadius = '4px';
+      noButton.style.padding = '6px 12px';
+      noButton.style.cursor = 'pointer';
+      noButton.style.fontWeight = 'bold';
+      noButton.style.fontSize = '1rem';
+      noButton.style.transition = 'background-color 0.3s ease';
+      noButton.addEventListener('mouseenter', () => {
+        noButton.style.backgroundColor = '#999';
+      });
+      noButton.addEventListener('mouseleave', () => {
+        noButton.style.backgroundColor = '#ccc';
+      });
+
+      buttonsContainer.appendChild(yesButton);
+      buttonsContainer.appendChild(noButton);
+      confirmationCard.appendChild(messageText);
+      confirmationCard.appendChild(buttonsContainer);
+
+      // Append confirmation card to body
+      document.body.appendChild(confirmationCard);
+
+      // Wait for confirmation
+      const confirmed = await new Promise<boolean>((resolve) => {
+        yesButton.onclick = () => {
+          document.body.removeChild(confirmationCard);
+          resolve(true);
+        };
+        noButton.onclick = () => {
+          document.body.removeChild(confirmationCard);
+          resolve(false);
+        };
+
+        // Also remove the confirmation card if user clicks outside
+        confirmationCard.addEventListener('click', (e) => {
+          if (e.target === confirmationCard) {
+            document.body.removeChild(confirmationCard);
+            resolve(false);
+          }
+        });
+      });
+
+      if (!confirmed) return;
+
+      // Fetch patient details and update profile
+      const details = await fetchPatientDetails(p.pacCodigo);
+      if (pacienteProfileContainer && details) {
+        const nameEl = pacienteProfileContainer.querySelector('.profile-header-info h2');
+        const infoPs = pacienteProfileContainer.querySelectorAll('.profile-header-info p');
+        if (nameEl) (nameEl as HTMLElement).textContent = details.pacNome || p.pacNome;
+        if (infoPs.length >= 5) {
+          (infoPs[0] as HTMLElement).textContent = `ID: #${details.pacCodigo || p.pacCodigo}`;
+          (infoPs[1] as HTMLElement).textContent = `Sexo: ${details.pacSexo || ''}`;
+          (infoPs[2] as HTMLElement).textContent = `Data de Nascimento: ${formatDate(details.pacDtNasc)}`;
+          (infoPs[3] as HTMLElement).textContent = `Pai: ${details.pacPaiNome || ''}`;
+          (infoPs[4] as HTMLElement).textContent = `Mãe: ${details.pacMaeNome || ''}`;
+        }
+      }
+      // Do not clear or reset profile container on new searches, keep info fixed until new selection
       pacienteSearchContainer.style.display = 'none';
       pacienteProfileContainer.style.display = 'block';
+
+      // Show notification card only after patient selection
+      if (notificationPanel && notificationBell) {
+        // Remove fixed show class to avoid persistent display
+        notificationPanel.classList.remove('show');
+        notificationBell.classList.remove('active');
+        notificationBell.setAttribute('aria-expanded', 'false');
+      }
     });
-    frag.appendChild(li);
+
+    cardDiv.appendChild(infoSpan);
+    cardDiv.appendChild(selectButton);
+    frag.appendChild(cardDiv);
   });
   searchResultsList.appendChild(frag);
 }

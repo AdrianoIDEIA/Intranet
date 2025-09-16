@@ -15,11 +15,6 @@ async function run() {
     const pool = await getPool();
     const result = await pool.request().query('SELECT 1 AS ok');
     console.log('DB basic test result:', result.recordset);
-
-    // Test the patient table
-    const patientResult = await pool.request().query('SELECT TOP 1 pacCodigo, pacNome FROM CadPac');
-    console.log('Patient table test result:', patientResult.recordset);
-
     console.log('DB test finished successfully');
     process.exit(0);
   } catch (err) {
