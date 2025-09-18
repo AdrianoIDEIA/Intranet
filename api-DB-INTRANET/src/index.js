@@ -1,7 +1,8 @@
-dimport express from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import consultasRouter from './routes/consultas.js';
+import usersRouter from './routes/users.js';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use((req, res, next) => {
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/consultas', consultasRouter);
+app.use('/api/users', usersRouter);
 
 const port = process.env.PORT || 5002; // Porta diferente, 5002
 // Allow binding to a specific host (useful when running on a remote server)

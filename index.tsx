@@ -547,7 +547,7 @@ seedAnamnesesIfEmpty();
 // --- Pacientes Panel Logic ---
 
 // Configuration for API: prefer Vite env vars, then window fallbacks, then localhost
-const API_URL = (import.meta as any).env?.VITE_API_URL || (window as any).__API_URL__ || 'http://localhost:5001';
+const API_URL = (import.meta as any).env?.VITE_API_URL || (window as any).__API_URL__ || 'http://localhost:5002';
 const API_TOKEN = (import.meta as any).env?.VITE_API_TOKEN || (window as any).__API_TOKEN__ || 'troque_este_token';
 console.log('API_URL:', API_URL);
 console.log('API_TOKEN:', API_TOKEN ? '***' : 'not set');
@@ -572,12 +572,12 @@ async function searchPatientsByName(nome: string) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     // If API returned an empty array, attempt local fallback (useful in dev)
-    if (Array.isArray(data) && data.length === 0) {
+    if (Array.isArray(data.data) && data.data.length === 0) {
       console.warn('API returned no results — trying local fallback');
       // fallthrough to local fallback logic below
     } else {
-      console.debug('API search returned', data.length ?? 'unknown', 'results');
-      return data;
+      console.debug('API search returned', data.data.length ?? 'unknown', 'results');
+      return data.data;
     }
   } catch (err) {
     console.warn('API search failed, using local fallback.', err);
