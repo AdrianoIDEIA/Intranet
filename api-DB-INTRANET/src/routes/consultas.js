@@ -1,5 +1,5 @@
 import express from 'express';
-import { getPool, sql } from '../db/sqlserver.js';
+import { getDfmedPool, sql } from '../db/dfmedSqlServer.js';
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ router.get('/paciente-por-nome/:nome', async (req, res, next) => {
   }
 
   try {
-    const pool = await getPool();
+    const pool = await getDfmedPool();
     // Utiliza parâmetro nome com wildcard para busca por primeiro nome ou parte do nome
     const nameParam = `%${String(nome).trim()}%`;
     const result = await pool.request()
@@ -35,7 +35,7 @@ router.get('/paciente/:codigo', async (req, res, next) => {
   }
 
   try {
-    const pool = await getPool();
+    const pool = await getDfmedPool();
     const result = await pool.request()
       .input('codigo', sql.Int, Number(codigo))
       .query(`SELECT pacCodigo, pacNome, pacSexo, pacDtNasc, pacPaiNome, pacMaeNome FROM CadPac WHERE pacCodigo = @codigo`);
@@ -53,7 +53,7 @@ router.get('/paciente/:codigo', async (req, res, next) => {
 // Diagnostic: check DB connectivity
 router.get('/health-db', async (_req, res, next) => {
   try {
-    const pool = await getPool();
+    const pool = await getDfmedPool();
     const result = await pool.request().query('SELECT 1 AS ok');
     if (result && result.recordset && result.recordset[0] && result.recordset[0].ok === 1) {
       return res.json({ ok: true });

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import consultasRouter from './routes/consultas.js';
+import usersRouter from './routes/users.js';
 
 dotenv.config();
 
@@ -11,6 +12,10 @@ app.use(cors({ origin: true, credentials: false }));
 
 // Auth simples por header x-api-token
 app.use((req, res, next) => {
+  // Skip token check for health and consultas routes
+  if (req.path === '/health' || req.path.startsWith('/api/consultas')) {
+    return next();
+  }
   const token = req.headers['x-api-token'];
   if (process.env.API_TOKEN && token !== process.env.API_TOKEN) {
     return res.status(401).json({ message: 'unauthorized' });
@@ -20,8 +25,9 @@ app.use((req, res, next) => {
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/consultas', consultasRouter);
+app.use('/api/users', usersRouter);
 
-const port = process.env.PORT || 5001;
+const port = process.env.PORT || 5004;
 // Allow binding to a specific host (useful when running on a remote server)
 const host = process.env.HOST || '0.0.0.0';
 app.listen(port, host, () => {

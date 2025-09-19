@@ -10,8 +10,11 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: true, credentials: false }));
 
-// Auth simples por header x-api-token
+// Auth simples por header x-api-token, mas ignorar para rota /api/users/login e POST /api/users
 app.use((req, res, next) => {
+  if (req.path === '/api/users/login' || req.path.startsWith('/api/users/login') || (req.path === '/api/users' && req.method === 'POST')) {
+    return next();
+  }
   const token = req.headers['x-api-token'];
   if (process.env.API_TOKEN && token !== process.env.API_TOKEN) {
     return res.status(401).json({ message: 'unauthorized' });

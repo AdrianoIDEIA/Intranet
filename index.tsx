@@ -4,10 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// --- Constants ---
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5001'; // For patient queries
+const INTRANET_API_URL = (import.meta as any).env?.VITE_INTRANET_API_URL || 'http://localhost:5002'; // For user management
+const API_TOKEN = (import.meta as any).env?.VITE_API_TOKEN || 'troque_este_token';
+console.log('API_URL:', API_URL);
+console.log('INTRANET_API_URL:', INTRANET_API_URL);
+console.log('API_TOKEN:', API_TOKEN ? '***' : 'not set');
+
 // --- DOM Elements ---
 const loginForm = document.getElementById('login-form') as HTMLFormElement;
-const emailInput = document.getElementById('email') as HTMLInputElement;
-const passwordInput = document.getElementById('password') as HTMLInputElement;
+const nomeInput = document.getElementById('nome') as HTMLInputElement;
+const passwordInput = document.getElementById('senha') as HTMLInputElement;
 const errorMessage = document.getElementById(
   'error-message'
 ) as HTMLParagraphElement;
@@ -29,6 +37,16 @@ const notificationBell = document.getElementById(
 const notificationPanel = document.getElementById(
   'notification-panel'
 ) as HTMLElement;
+
+// User Management Elements
+const userManagementPanel = document.getElementById('user-management-panel') as HTMLElement;
+const createUserForm = document.getElementById('create-user-form') as HTMLFormElement;
+const newUserNameInput = document.getElementById('new-user-name') as HTMLInputElement;
+const newUserEmailInput = document.getElementById('new-user-email') as HTMLInputElement;
+const newUserPasswordInput = document.getElementById('new-user-password') as HTMLInputElement;
+const newUserRoleSelect = document.getElementById('new-user-role') as HTMLSelectElement;
+const createUserErrorMessage = document.getElementById('create-user-error-message') as HTMLParagraphElement;
+const createUserSuccessMessage = document.getElementById('create-user-success-message') as HTMLParagraphElement;
 
 // Anamnese Panel Elements
 const anamneseActions = document.getElementById(
@@ -84,7 +102,7 @@ const backToCartasMainBtn = document.getElementById(
 const viewProfileBtn = document.getElementById(
   'view-profile-btn'
 ) as HTMLButtonElement;
-const profileModalOverlay = document.getElementById(
+let profileModalOverlay = document.getElementById(
   'profile-modal-overlay'
 ) as HTMLElement;
 const closeProfileModalBtn = document.getElementById(
@@ -92,13 +110,8 @@ const closeProfileModalBtn = document.getElementById(
 ) as HTMLButtonElement;
 
 // --- Auth e Usuários ---
-type Role = 'TO' | 'Fono' | 'Psico' | 'Admin';
+type Role = 'TO' | 'Fono' | 'Psico' | 'MASTER';
 interface AppUser { username: string; role: Role; }
-const USERS: AppUser[] = [
-  { username: 'TO', role: 'TO' },
-  { username: 'FONO', role: 'Fono' },
-  { username: 'PSICO', role: 'Psico' },
-];
 
 function setCurrentUser(user: AppUser | null) {
   if (user) localStorage.setItem('currentUser', JSON.stringify(user));
@@ -179,24 +192,51 @@ function updateAnamnesisVisibility() {
 // --- Event Listeners ---
 
 // Handle login form submission
-loginForm?.addEventListener('submit', (e: Event) => {
+loginForm?.addEventListener('submit', async (e: Event) => {
   e.preventDefault();
-  const username = (emailInput.value || '').trim().toUpperCase();
-  const password = passwordInput.value;
+  const nome = (nomeInput.value || '').trim();
+  const senha = passwordInput.value;
 
-  const found = USERS.find(u => u.username === username);
-  if (found && password === '12345') {
+  if (!nome || !senha) {
+    errorMessage.textContent = 'Nome e senha são obrigatórios.';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${INTRANET_API_URL}/api/users/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-token': API_TOKEN,
+      },
+      body: JSON.stringify({ nome, senha }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      errorMessage.textContent = errorData.message || `Erro no login: ${res.status}`;
+      return;
+    }
+
+    const data = await res.json();
+    const user = data.user;
+    if (!user) {
+      errorMessage.textContent = 'Resposta inválida do servidor.';
+      return;
+    }
+
     errorMessage.textContent = '';
-    setCurrentUser(found);
+    setCurrentUser({ username: user.nome, role: user.role });
     loginContainer.style.display = 'none';
     dashboardContainer.style.display = 'flex';
-    welcomeMessage.textContent = `Bem-vindo, ${found.username} (${found.role})`;
+    welcomeMessage.textContent = `Bem-vindo, ${user.nome} (${user.role})`;
     const initialActiveButton = document.querySelector('.nav-button.active') as HTMLElement;
     updatePageTitle(initialActiveButton?.dataset.page || 'Intranet');
     // Ajustar visibilidade das seções conforme papel
     updateAnamnesisVisibility();
-  } else {
-    errorMessage.textContent = 'Credenciais inválidas. Tente novamente.';
+  } catch (err) {
+    console.error('Erro no login:', err);
+    errorMessage.textContent = 'Falha na conexão. Tente novamente.';
   }
 });
 
@@ -251,7 +291,237 @@ window.addEventListener('click', (e) => {
 
 // --- Profile Modal Logic ---
 viewProfileBtn?.addEventListener('click', () => {
-  profileModalOverlay.style.display = 'flex';
+  const current = getCurrentUser();
+  let modalOverlay = profileModalOverlay;
+  if (!modalOverlay) {
+    modalOverlay = document.createElement('div');
+    modalOverlay.id = 'profile-modal-overlay';
+    modalOverlay.style.position = 'fixed';
+    modalOverlay.style.top = '0';
+    modalOverlay.style.left = '0';
+    modalOverlay.style.width = '100%';
+    modalOverlay.style.height = '100%';
+    modalOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modalOverlay.style.display = 'none';
+    modalOverlay.style.justifyContent = 'center';
+    modalOverlay.style.alignItems = 'center';
+    modalOverlay.style.zIndex = '1000';
+    document.body.appendChild(modalOverlay);
+    profileModalOverlay = modalOverlay;
+  }
+  if (modalOverlay) {
+    // Clear previous content or create if not exists
+    let modalContent = modalOverlay.querySelector('.modal-content') as HTMLElement;
+    if (!modalContent) {
+      modalContent = document.createElement('div');
+      modalContent.className = 'modal-content';
+      modalContent.style.backgroundColor = 'white';
+      modalContent.style.padding = '20px';
+      modalContent.style.borderRadius = '8px';
+      modalContent.style.maxWidth = '500px';
+      modalContent.style.width = '100%';
+      modalContent.style.position = 'relative';
+      modalOverlay.appendChild(modalContent);
+    } else {
+      modalContent.innerHTML = '';
+    }
+
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.position = 'absolute';
+    closeBtn.style.top = '10px';
+    closeBtn.style.right = '10px';
+    closeBtn.style.background = 'none';
+    closeBtn.style.border = 'none';
+    closeBtn.style.fontSize = '24px';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.addEventListener('click', () => {
+      modalOverlay.style.display = 'none';
+    });
+    modalContent.appendChild(closeBtn);
+
+    // User info
+    const userInfo = document.createElement('div');
+    userInfo.innerHTML = `<h3>Perfil do Usuário</h3><p>Nome: ${current?.username || 'N/A'}</p><p>Role: ${current?.role || 'N/A'}</p>`;
+    modalContent.appendChild(userInfo);
+
+    // If MASTER, add user creation form
+    if (current?.role === 'MASTER') {
+      const formTitle = document.createElement('h3');
+      formTitle.textContent = 'Adicionar Novo Usuário';
+      modalContent.appendChild(formTitle);
+
+      const form = document.createElement('form');
+      form.id = 'add-user-form';
+
+      // Label for the user list
+      const listLabel = document.createElement('label');
+      listLabel.textContent = 'Selecione um usuário do sistema dfMed para adicionar:';
+      listLabel.style.display = 'block';
+      listLabel.style.marginTop = '10px';
+
+      // Container for the user list
+      const userListContainer = document.createElement('div');
+      userListContainer.id = 'user-list-container';
+      userListContainer.style.display = 'block'; // Visible by default
+      userListContainer.style.maxHeight = '200px';
+      userListContainer.style.overflowY = 'auto';
+      userListContainer.style.border = '1px solid #ccc';
+      userListContainer.style.borderRadius = '4px';
+      userListContainer.style.marginBottom = '10px';
+
+      // Selected user display
+      const selectedUserDiv = document.createElement('div');
+      selectedUserDiv.id = 'selected-user-display';
+      selectedUserDiv.style.display = 'none';
+      selectedUserDiv.style.padding = '10px';
+      selectedUserDiv.style.backgroundColor = '#e8f5e8';
+      selectedUserDiv.style.border = '1px solid #4caf50';
+      selectedUserDiv.style.borderRadius = '4px';
+      selectedUserDiv.style.marginBottom = '10px';
+
+      const roleLabel = document.createElement('label');
+      roleLabel.textContent = 'Role:';
+      roleLabel.style.display = 'block';
+      const roleSelect = document.createElement('select');
+      roleSelect.name = 'role';
+      roleSelect.required = true;
+      roleSelect.style.width = '100%';
+      roleSelect.style.padding = '8px';
+      roleSelect.style.marginBottom = '10px';
+      roleSelect.style.border = '1px solid #ccc';
+      roleSelect.style.borderRadius = '4px';
+      const roles = ['TO', 'Fono', 'Psico', 'Admin'];
+      roles.forEach(role => {
+        const option = document.createElement('option');
+        option.value = role;
+        option.textContent = role;
+        roleSelect.appendChild(option);
+      });
+
+      const submitBtn = document.createElement('button');
+      submitBtn.type = 'submit';
+      submitBtn.textContent = 'Adicionar Usuário';
+      submitBtn.style.backgroundColor = '#4a6cf7';
+      submitBtn.style.color = 'white';
+      submitBtn.style.border = 'none';
+      submitBtn.style.padding = '10px 20px';
+      submitBtn.style.borderRadius = '4px';
+      submitBtn.style.cursor = 'pointer';
+      submitBtn.style.fontWeight = 'bold';
+
+      // Variables to store selected user data
+      let selectedUserCodigo: number | null = null;
+      let selectedUserNome: string = '';
+
+      // Function to load and display users
+      const loadAndDisplayUsers = async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/users`, {
+            method: 'GET',
+            headers: {
+              'x-api-token': API_TOKEN,
+            },
+          });
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const result = await res.json();
+          const users = result.data; // Assuming the user list is in result.data
+
+          userListContainer.innerHTML = ''; // Clear previous results
+
+          if (users && users.length > 0) {
+            users.forEach((user: any) => {
+              const userDiv = document.createElement('div');
+              userDiv.textContent = `${user.usrNome} (Código: ${user.usrCodigo})`;
+              userDiv.style.padding = '8px';
+              userDiv.style.cursor = 'pointer';
+              userDiv.style.borderBottom = '1px solid #eee';
+              userDiv.addEventListener('click', () => {
+                selectedUserCodigo = user.usrCodigo;
+                selectedUserNome = user.usrNome;
+                selectedUserDiv.textContent = `Usuário selecionado: ${user.usrNome} (Código: ${user.usrCodigo})`;
+                selectedUserDiv.style.display = 'block';
+                userListContainer.style.display = 'none'; // Hide list after selection
+              });
+              userDiv.addEventListener('mouseenter', () => {
+                userDiv.style.backgroundColor = '#f0f0f0';
+              });
+              userDiv.addEventListener('mouseleave', () => {
+                userDiv.style.backgroundColor = 'transparent';
+              });
+              userListContainer.appendChild(userDiv);
+            });
+          } else {
+            const noResultsDiv = document.createElement('div');
+            noResultsDiv.textContent = 'Nenhum usuário encontrado no sistema dfMed.';
+            noResultsDiv.style.padding = '8px';
+            noResultsDiv.style.color = '#666';
+            userListContainer.appendChild(noResultsDiv);
+          }
+        } catch (err) {
+          console.error('Erro ao carregar usuários:', err);
+          userListContainer.innerHTML = '<div style="padding: 8px; color: #f44336;">Erro ao carregar a lista de usuários.</div>';
+        }
+      };
+
+      // Load users when the form is created
+      loadAndDisplayUsers();
+
+      form.appendChild(listLabel);
+      form.appendChild(userListContainer);
+      form.appendChild(selectedUserDiv);
+      form.appendChild(roleLabel);
+      form.appendChild(roleSelect);
+      form.appendChild(submitBtn);
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!selectedUserCodigo) {
+          alert('Por favor, selecione um usuário da lista.');
+          return;
+        }
+
+        const formData = new FormData(form);
+        const data = {
+          nome: selectedUserNome,
+          email: `user${selectedUserCodigo}@intranet.com`, // Generate email based on usrCodigo
+          senha: '123456', // Default password
+          role: formData.get('role'),
+          usrCodigo: selectedUserCodigo
+        };
+
+        try {
+          const res = await fetch(`${INTRANET_API_URL}/api/users`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-token': API_TOKEN,
+            },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          alert('Usuário adicionado com sucesso!');
+          form.reset();
+          selectedUserDiv.style.display = 'none';
+          userListContainer.style.display = 'block'; // Show the list again
+          selectedUserCodigo = null;
+          selectedUserNome = '';
+          // Optionally, reload the list
+          loadAndDisplayUsers();
+        } catch (err) {
+          console.error('Erro ao adicionar usuário:', err);
+          alert('Falha ao adicionar usuário.');
+        }
+      });
+
+      modalContent.appendChild(form);
+    }
+
+    modalOverlay.style.display = 'flex';
+  }
 });
 
 closeProfileModalBtn?.addEventListener('click', () => {
@@ -545,12 +815,6 @@ seedAnamnesesIfEmpty();
 
 
 // --- Pacientes Panel Logic ---
-
-// Configuration for API: prefer Vite env vars, then window fallbacks, then localhost
-const API_URL = (import.meta as any).env?.VITE_API_URL || (window as any).__API_URL__ || 'http://localhost:5002';
-const API_TOKEN = (import.meta as any).env?.VITE_API_TOKEN || (window as any).__API_TOKEN__ || 'troque_este_token';
-console.log('API_URL:', API_URL);
-console.log('API_TOKEN:', API_TOKEN ? '***' : 'not set');
 
 // Local sample patients used when localStorage is empty (dev fallback)
 const LOCAL_PATIENT_SAMPLES = [

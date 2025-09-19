@@ -1,24 +1,14 @@
-import dotenv from 'dotenv';
-import path from 'path';
 
-console.log('Current working directory:', process.cwd());
+// dotenv is already loaded in index.js
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// Set database to DFMED for this connection
+process.env.SQLSERVER_DB = 'INTRANET';
 
 // `sql` will be set to the imported mssql module (either tedious or msnodesqlv8)
 let sql = null;
 
-console.log('Loaded env vars:', {
-  SQLSERVER_AUTH: process.env.SQLSERVER_AUTH,
-  SQLSERVER_USER: process.env.SQLSERVER_USER,
-  SQLSERVER_PASSWORD: process.env.SQLSERVER_PASSWORD,
-  SQLSERVER_HOST: process.env.SQLSERVER_HOST,
-  SQLSERVER_DB: process.env.SQLSERVER_DB,
-  SQLSERVER_PORT: process.env.SQLSERVER_PORT,
-  SQLSERVER_INSTANCE: process.env.SQLSERVER_INSTANCE
-});
-
 // Build connection config. Support both SQL auth and Windows Integrated (msnodesqlv8).
+
 let useWindowsAuth = (process.env.SQLSERVER_AUTH || '').toLowerCase() === 'windows';
 // If user contains domain (DOMAIN\user) but password is provided, prefer SQL auth for remote connections
 if (!useWindowsAuth && process.env.SQLSERVER_USER && (process.env.SQLSERVER_USER.indexOf('\\') !== -1 || process.env.SQLSERVER_USER.indexOf('/') !== -1) && !process.env.SQLSERVER_PASSWORD) {
@@ -29,11 +19,11 @@ let config;
 if (useWindowsAuth) {
   // Use msnodesqlv8 driver with Trusted Connection
   const host = process.env.SQLSERVER_HOST || 'localhost';
-  const database = 'intranet';
+  const database = process.env.SQLSERVER_DB; // Use env database
   // Build a connectionString expected by msnodesqlv8 (include instance or port when present)
   const instanceName = process.env.SQLSERVER_INSTANCE || undefined;
   const portPart = process.env.SQLSERVER_PORT ? `,${process.env.SQLSERVER_PORT}` : '';
-  const serverAddress = instanceName ? `${host}\\${instanceName}` : `${host}${portPart}`;
+  const serverAddress = instanceName ? `${host}\${instanceName}` : `${host}${portPart}`;
   const connectionString = `Server=${serverAddress};Database=${database};Trusted_Connection=Yes;`;
 
   config = {
@@ -54,25 +44,18 @@ if (useWindowsAuth) {
     options: { encrypt: process.env.SQLSERVER_ENCRYPT === 'true' ? true : false, trustServerCertificate: true },
     // If you need to use a named instance, set SQLSERVER_INSTANCE
     instanceName: process.env.SQLSERVER_INSTANCE || undefined,
-    database: 'intranet',
+    database: process.env.SQLSERVER_DB, // Use env database
     pool: { max: 10, min: 0, idleTimeoutMillis: 30000 }
   };
 }
 
-let poolPromise;
-export async function getPool() {
-  if (!poolPromise) {
-    // Debug: log what we will try to connect with
-    try {
-      if (useWindowsAuth) {
-        console.log('Attempting SQL Server connect (Windows Auth) using connectionString:', config.connectionString);
-      } else {
-        console.log('Attempting SQL Server connect to', { server: config.server, database: config.database });
-      }
-    } catch (e) {}
+config.database = 'INTRANET'; // Force database to DFMED
+console.log('DFMed config database:', config.database);
 
+let poolPromise;
+export async function getDfmedPool() {
+  if (!poolPromise) {
     if (useWindowsAuth) {
-      // dynamic import of msnodesqlv8 driver (try .js path first)
       try {
         const modRaw = await import('mssql/msnodesqlv8.js');
         const mod = modRaw && modRaw.default ? modRaw.default : modRaw;

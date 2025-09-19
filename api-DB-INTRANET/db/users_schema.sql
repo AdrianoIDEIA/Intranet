@@ -9,9 +9,8 @@ GO
 
 -- Tabela Usuarios
 CREATE TABLE Usuarios (
-    usuario_id INT IDENTITY(1,1) PRIMARY KEY,
+    usrCodigo INT PRIMARY KEY,
     nome NVARCHAR(255) NOT NULL,
-    email NVARCHAR(255) UNIQUE NOT NULL,
     senha NVARCHAR(255) NOT NULL,
     role NVARCHAR(50) NOT NULL DEFAULT 'USER', -- MASTER, FONO, TO, PSICO
     ativo BIT NOT NULL DEFAULT 1,
@@ -21,10 +20,9 @@ CREATE TABLE Usuarios (
 GO
 
 -- Índices para performance
-CREATE INDEX idx_usuarios_email ON Usuarios(email);
 CREATE INDEX idx_usuarios_role ON Usuarios(role);
 GO
 
 -- Inserir usuário MASTER inicial
-INSERT INTO Usuarios (nome, email, senha, role) VALUES ('Master Admin', 'master@intranet.com', 'hashed_password', 'MASTER');
+INSERT INTO Usuarios (nome, senha, role, usrCodigo) VALUES ('master', 'master12345', 'MASTER', 1);
 GO
