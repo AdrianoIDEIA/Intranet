@@ -4,11 +4,13 @@ import dotenv from 'dotenv';
 import consultasRouter from './routes/consultas.js';
 import usersRouter from './routes/users.js';
 
+console.log('--- API INICIANDO COM CORS SIMPLES ---');
+
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: true, credentials: false }));
+app.use(cors());
 
 // Auth simples por header x-api-token, mas ignorar para rota /api/users/login e POST /api/users
 app.use((req, res, next) => {

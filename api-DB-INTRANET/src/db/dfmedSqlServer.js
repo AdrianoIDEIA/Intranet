@@ -1,9 +1,6 @@
 
 // dotenv is already loaded in index.js
 
-// Set database to DFMED for this connection
-process.env.SQLSERVER_DB = 'INTRANET';
-
 // `sql` will be set to the imported mssql module (either tedious or msnodesqlv8)
 let sql = null;
 
@@ -49,7 +46,6 @@ if (useWindowsAuth) {
   };
 }
 
-config.database = 'INTRANET'; // Force database to DFMED
 console.log('DFMed config database:', config.database);
 
 let poolPromise;

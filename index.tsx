@@ -5,8 +5,8 @@
  */
 
 // --- Constants ---
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5001'; // For patient queries
-const INTRANET_API_URL = (import.meta as any).env?.VITE_INTRANET_API_URL || 'http://localhost:5002'; // For user management
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8082'; // For patient queries
+const INTRANET_API_URL = (import.meta as any).env?.VITE_INTRANET_API_URL || 'http://localhost:8081'; // For user management
 const API_TOKEN = (import.meta as any).env?.VITE_API_TOKEN || 'troque_este_token';
 console.log('API_URL:', API_URL);
 console.log('INTRANET_API_URL:', INTRANET_API_URL);

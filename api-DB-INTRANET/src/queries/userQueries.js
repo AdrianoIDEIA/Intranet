@@ -10,11 +10,10 @@ import bcrypt from 'bcrypt';
 /**
  * Autentica usuário por nome e senha
  */
-export async function autenticarUsuario(nome, senha) {
+export async function autenticarUsuario(pool, nome, senha) {
   // migrarSenhasParaHash(); // Chama a função de migração (pode ser removida depois)
-  const pool = await getPool();
   // Primeiro, busca o usuário pelo nome
-  const userResult = await pool.request()
+  const userResult = await pool
     .input('nome', sql.VarChar, nome)
     .query('SELECT usrCodigo, nome, senha, role, ativo FROM Usuarios WHERE nome = @nome AND ativo = 1');
 
@@ -38,9 +37,8 @@ export async function autenticarUsuario(nome, senha) {
 /**
  * Busca usuário por usrCodigo
  */
-export async function buscarUsuarioPorUsrCodigo(usrCodigo) {
-  const pool = await getPool();
-  const result = await pool.request()
+export async function buscarUsuarioPorUsrCodigo(pool, usrCodigo) {
+  const result = await pool
     .input('usrCodigo', sql.Int, usrCodigo)
     .query('SELECT usrCodigo, nome, role, ativo, data_criacao FROM Usuarios WHERE usrCodigo = @usrCodigo AND ativo = 1');
 
@@ -50,9 +48,8 @@ export async function buscarUsuarioPorUsrCodigo(usrCodigo) {
 /**
  * Lista todos os usuários
  */
-export async function listarUsuarios() {
-  const pool = await getPool();
-  const result = await pool.request()
+export async function listarUsuarios(pool) {
+  const result = await pool
     .query('SELECT usrCodigo, nome, role, ativo, data_criacao FROM Usuarios WHERE ativo = 1 ORDER BY nome');
 
   return result.recordset;
@@ -61,9 +58,8 @@ export async function listarUsuarios() {
 /**
  * Busca usuário no DFmed por usrCodigo
  */
-export async function buscarUsuarioDFmedPorUsrCodigo(usrCodigo) {
-  const pool = await getDfmedPool();
-  const result = await pool.request()
+export async function buscarUsuarioDFmedPorUsrCodigo(dfmedPool, usrCodigo) {
+  const result = await dfmedPool
     .input('usrCodigo', sql.Int, usrCodigo)
     .query('SELECT usrCodigo FROM [dfMed].[dbo].[Usuarios] WHERE usrCodigo = @usrCodigo AND usrFlagAtivo = 1 AND usrFlagDeletado = 0');
 
@@ -73,22 +69,22 @@ export async function buscarUsuarioDFmedPorUsrCodigo(usrCodigo) {
 /**
  * Cria novo usuário buscando nome e usrCodigo do DFmed
  */
-export async function criarUsuario(dados) {
+export async function criarUsuario(pool, dfmedPool, dados) {
   const { role = 'USER', usrCodigo } = dados;
 
   if (!usrCodigo) {
     throw new Error('usrCodigo é obrigatório para criar usuário.');
   }
 
+  const intranetPool = await getPool();
   // Verifica se o usrCodigo já existe na base de dados intranet
-  const usuarioIntranet = await buscarUsuarioPorUsrCodigo(usrCodigo);
+  const usuarioIntranet = await buscarUsuarioPorUsrCodigo(intranetPool, usrCodigo);
   if (usuarioIntranet) {
     throw new Error('Usuário com este usrCodigo já existe na intranet.');
   }
 
   // Busca usuário no DFmed para obter nome e usrCodigo
-  const poolDfmed = await getDfmedPool();
-  const resultDfmed = await poolDfmed.request()
+  const resultDfmed = await dfmedPool
     .input('usrCodigo', sql.Int, usrCodigo)
     .query('SELECT usrNome as nome, usrCodigo FROM [dfMed].[dbo].[Usuarios] WHERE usrCodigo = @usrCodigo AND usrFlagAtivo = 1 AND usrFlagDeletado = 0');
 
@@ -102,9 +98,7 @@ export async function criarUsuario(dados) {
   const saltRounds = 10;
   const hashedPassword = await bcrypt.hash(senhaTemporaria, saltRounds);
 
-  const pool = await getPool();
-
-  const result = await pool.request()
+  const result = await intranetPool
     .input('nome', sql.VarChar, usuarioDFmed.nome)
     .input('senha', sql.VarChar, hashedPassword)
     .input('role', sql.VarChar, role)
@@ -125,12 +119,11 @@ export async function criarUsuario(dados) {
 /**
  * Atualiza usuário
  */
-export async function atualizarUsuario(usrCodigo, dados) {
+export async function atualizarUsuario(pool, usrCodigo, dados) {
   const { nome, role, ativo, senha } = dados;
-  const pool = await getPool();
 
   let setClauses = ['nome = @nome', 'role = @role', 'ativo = @ativo', 'data_atualizacao = GETDATE()'];
-  const request = pool.request()
+  const request = pool
     .input('usrCodigo', sql.Int, usrCodigo)
     .input('nome', sql.VarChar, nome)
     .input('role', sql.VarChar, role)
@@ -165,9 +158,8 @@ export async function atualizarUsuario(usrCodigo, dados) {
 /**
  * Desativa usuário (soft delete)
  */
-export async function desativarUsuario(usrCodigo) {
-  const pool = await getPool();
-  await pool.request()
+export async function desativarUsuario(pool, usrCodigo) {
+  await pool
     .input('usrCodigo', sql.Int, usrCodigo)
     .query('UPDATE Usuarios SET ativo = 0, data_atualizacao = GETDATE() WHERE usrCodigo = @usrCodigo');
 
@@ -177,9 +169,8 @@ export async function desativarUsuario(usrCodigo) {
 /**
  * Busca usuários do DFmed para adicionar
  */
-export async function buscarUsuariosDFmed() {
-  const pool = await getDfmedPool();
-  const result = await pool.request()
+export async function buscarUsuariosDFmed(dfmedPool) {
+  const result = await dfmedPool
     .query(`
       SELECT TOP 100
         usrCodigo as id,
@@ -196,11 +187,9 @@ export async function buscarUsuariosDFmed() {
 /**
  * Altera senha do usuário
  */
-export async function alterarSenhaUsuario(usrCodigo, senhaAtual, novaSenha) {
-  const pool = await getPool();
-
+export async function alterarSenhaUsuario(pool, usrCodigo, senhaAtual, novaSenha) {
   // Busca o usuário para verificar a senha atual
-  const userResult = await pool.request()
+  const userResult = await pool
     .input('usrCodigo', sql.Int, usrCodigo)
     .query('SELECT senha FROM Usuarios WHERE usrCodigo = @usrCodigo AND ativo = 1');
 
@@ -220,7 +209,7 @@ export async function alterarSenhaUsuario(usrCodigo, senhaAtual, novaSenha) {
   const hashedPassword = await bcrypt.hash(novaSenha, saltRounds);
 
   // Atualiza a senha
-  await pool.request()
+  await pool
     .input('usrCodigo', sql.Int, usrCodigo)
     .input('senha', sql.VarChar, hashedPassword)
     .query('UPDATE Usuarios SET senha = @senha, data_atualizacao = GETDATE() WHERE usrCodigo = @usrCodigo');
